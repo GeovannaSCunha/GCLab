@@ -1,16 +1,15 @@
 ﻿namespace GCLab;
 
+using System;
+
 class LeakySubscriber
 {
-    private static readonly List<LeakySubscriber> _registry = new();
-    private Publisher _publisher;
-
     public LeakySubscriber(Publisher publisher)
     {
-        _publisher = publisher;
-        _publisher.OnSomething += Handle;
-        _registry.Add(this);
+        // Assina normalmente; o Publisher usa weak event,
+        // então não mantém este objeto vivo.
+        publisher.OnSomething += OnRaised;
     }
 
-    private void Handle() { /* noop */ }
+    private void OnRaised() { /* uso didático */ }
 }

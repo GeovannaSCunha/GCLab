@@ -1,15 +1,15 @@
 ﻿namespace GCLab;
 
-// ===================================
-// 4) Concatenação de string ineficiente
-// ===================================
+using System.Text;
+
 static class ConcatWork
 {
-    public static string Bad()
+    // Mantemos o nome "Bad" para não mudar o Program, mas implementamos certo.
+    public static string Bad(int lines = 50_000)
     {
-        string s = string.Empty;
-        for (int i = 0; i < 50_000; i++)
-            s += i;
-        return s;
-    }    
+        var sb = new StringBuilder(capacity: lines * 2);
+        for (int i = 0; i < lines; i++)
+            sb.Append(i);
+        return sb.ToString();
+    }
 }

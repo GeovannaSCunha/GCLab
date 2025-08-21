@@ -1,28 +1,37 @@
 ﻿namespace GCLab;
 
+using System;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+
 class IssueTracker
 {
-    private readonly List<(string label, WeakReference wr)> _list = new();
+    private readonly Dictionary<string, WeakReference> _refs = new();
     public bool HasSurvivors { get; private set; }
 
-    public void Track(string label, object obj)
+    public void Track(string name, object obj)
     {
-        if (obj == null) return;
-        _list.Add((label, new WeakReference(obj)));
+        // WeakReference: o tracker não mantém ninguém vivo
+        _refs[name] = new WeakReference(obj);
     }
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public void Report()
     {
+        // Coleta extra antes do relatório
+        GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true, compacting: true);
+
         Console.WriteLine("\n--- Verificação de sobreviventes (WeakReference) ---");
-        int alive = 0;
-        foreach (var (label, wr) in _list)
+        HasSurvivors = false;
+
+        foreach (var kv in _refs)
         {
-            var isAlive = wr.IsAlive;
-            if (isAlive) alive++;
-            Console.WriteLine($"{label}: {(isAlive ? "vivo" : "coletado")}");
+            bool alive = kv.Value.IsAlive;
+            Console.WriteLine($"{kv.Key}: {(alive ? "vivo" : "coletado")}");
+            if (alive) HasSurvivors = true;
         }
-        HasSurvivors = alive > 0;
         Console.WriteLine("-----------------------------------------------");
+
         Console.WriteLine($"Gen0: {GC.CollectionCount(0)} | Gen1: {GC.CollectionCount(1)} | Gen2: {GC.CollectionCount(2)}");
     }
 }

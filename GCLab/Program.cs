@@ -1,5 +1,7 @@
 ﻿namespace GCLab;
 
+using System.Runtime.CompilerServices;
+
 class Program
 {
     // IMPORTANTE: ESTE CÓDIGO CONTÉM PROBLEMAS PROPOSITAIS.
@@ -11,6 +13,26 @@ class Program
 
         var tracker = new IssueTracker();
 
+        // Executa tudo em um frame separado para encurtar a vida das variáveis locais.
+        RunScenario(tracker);
+
+        // Coletas finais (com compactação) depois que o frame anterior acabou.
+        GCHelpers.FullCollect();
+        GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true, compacting: true);
+
+        // Relatório final
+        tracker.Report();
+
+        Console.WriteLine(tracker.HasSurvivors
+            ? "\n❌ Existem sobreviventes indesejados. Sua missão: corrigir o código e rodar novamente."
+            : "\n✅ GC limpo: nenhuma referência indesejada permaneceu viva.");
+    }
+
+    // Mantém o corpo original dentro deste método, sem inlining,
+    // para o JIT encerrar locais quando o método retornar.
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void RunScenario(IssueTracker tracker)
+    {
         // 1) Vazamento por evento não desinscrito
         var publisher = new Publisher();
         var subscriber = new LeakySubscriber(publisher);
@@ -37,19 +59,15 @@ class Program
         // Dispara evento para "usar" o subscriber
         publisher.Raise();
 
-        // Remover referências locais (mas problemas permanecem)
+        // Remover referências locais (didático)
         subscriber = null;
         publisher = null;
         pinned = null;
         logger = null;
         lohBuffer = null;
 
-        // Força coletas e verifica sobreviventes
+        // Coletas dentro do frame do cenário (drenam finalizers aqui também)
         GCHelpers.FullCollect();
-        tracker.Report();
-
-        Console.WriteLine(tracker.HasSurvivors
-            ? "\n❌ Existem sobreviventes indesejados. Sua missão: corrigir o código e rodar novamente."
-            : "\n✅ GC limpo: nenhuma referência indesejada permaneceu viva.");
+        GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true, compacting: true);
     }
 }

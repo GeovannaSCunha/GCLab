@@ -1,13 +1,12 @@
-﻿using System.Text;
+﻿using System.IO;
+using System.Text;
 
 namespace GCLab;
 
-// ===================================
-// 5) Recurso externo sem Dispose
-// ===================================
 class Logger
 {
-    private readonly StreamWriter _writer;
+    private StreamWriter? _writer;
+
     public Logger(string path)
     {
         _writer = new StreamWriter(path, append: true, Encoding.UTF8);
@@ -15,12 +14,17 @@ class Logger
 
     public void WriteLines(int count)
     {
+        if (_writer is null) return;
         for (int i = 0; i < count; i++)
             _writer.WriteLine($"linha {i}");
+        _writer.Flush();
     }
 
+    // Finalizer: garante liberação do recurso externo
     ~Logger()
     {
-        Console.WriteLine("~Logger finalizer chamado (não dependa disso)");        
+        try { _writer?.Dispose(); }
+        catch { /* não lançar do finalizer */ }
+        _writer = null;
     }
 }
